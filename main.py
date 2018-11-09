@@ -5,8 +5,8 @@ import arcade
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
 
-SPRITE_SCALING_PLAYER = 0.4
-SPRITE_SCALING_ENEMY = 0.4
+SPRITE_SCALING_PLAYER = 0.2
+SPRITE_SCALING_ENEMY = 0.1
 SPRITE_SCALING_SHOT = 0.08
 
 MOVEMENT_SPEED = 3
@@ -16,7 +16,9 @@ ENEMY_SCREEN_SPACING = 40
 SHOT_MOVEMENT_SPEED = 200
 
 # ENEMY_GENERATION_SPEED = 10
-ENEMY_GENERATION_PROBABILITY = 0.01
+ENEMY_GENERATION_PROBABILITY = 0.02
+
+GAME_TIME = 30
 
 
 class Player(arcade.Sprite):
@@ -64,7 +66,12 @@ class MyGame(arcade.Window):
 
         self.player_sprite = Player("img/player.png", SPRITE_SCALING_PLAYER)
         self.player_sprite.center_x = 150
-        self.player_sprite.center_y = 50
+        self.player_sprite.center_y = SCREEN_HEIGHT/2
+
+        self.score = 0
+        self.total_time = 0.0
+        self.running = True
+        self.win = False
 
 
     def setup(self):
@@ -73,13 +80,22 @@ class MyGame(arcade.Window):
 
     def on_draw(self):
         """ Render the screen. """
-        arcade.start_render()
-        self.player_sprite.draw()
 
-        for enemy in self.enemy_list:
-            enemy.draw()
-        for shot in self.shot_list:
-            shot.draw()
+        if self.running:
+            arcade.start_render()
+            self.player_sprite.draw()
+
+            for enemy in self.enemy_list:
+                enemy.draw()
+            for shot in self.shot_list:
+                shot.draw()
+            arcade.draw_text("Score: " + str(self.score), 10, 30, arcade.color.WHITE, 12)
+            arcade.draw_text("Time left: " + str(round(GAME_TIME - self.total_time,1)), 10, 10, arcade.color.WHITE, 12)
+        else:
+            if self.win:
+                arcade.draw_text("YOU WON! Score: " + str(self.score), SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, arcade.color.WHITE, 30)
+            else:
+                arcade.draw_text("Game OVER", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, arcade.color.WHITE, 30)
 
     def update(self, delta_time):
         """ All the logic to move, and the game logic goes here. """
@@ -103,10 +119,21 @@ class MyGame(arcade.Window):
 
         for enemy in self.enemy_list:
             for shot in self.shot_list:
-                if (arcade.check_for_collision(enemy, shot)):
+                if arcade.check_for_collision(enemy, shot):
                     self.enemy_list.remove(enemy)
                     self.shot_list.remove(shot)
+                    self.score += 1
+            if enemy.center_x - enemy.width/2 < 0:
+                self.stop_game()
 
+        self.total_time += delta_time
+        if self.total_time > GAME_TIME:
+            self.win = True
+            self.stop_game()
+
+    def stop_game(self):
+        self.running = False
+        # exit()
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
