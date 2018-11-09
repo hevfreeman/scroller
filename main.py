@@ -1,16 +1,22 @@
+import random
+
 import arcade
 
-SCREEN_WIDTH = 800
+SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
 
 SPRITE_SCALING_PLAYER = 0.4
 SPRITE_SCALING_ENEMY = 0.4
-SPRITE_SCALING_SHOT = 0.1
+SPRITE_SCALING_SHOT = 0.08
 
 MOVEMENT_SPEED = 3
-ENEMY_MOVEMENT_SPEED = 40
+ENEMY_MOVEMENT_SPEED = 120
+ENEMY_SCREEN_SPACING = 40
 
-SHOT_MOVEMENT_SPEED = 100
+SHOT_MOVEMENT_SPEED = 200
+
+# ENEMY_GENERATION_SPEED = 10
+ENEMY_GENERATION_PROBABILITY = 0.01
 
 
 class Player(arcade.Sprite):
@@ -34,16 +40,15 @@ class Enemy(arcade.Sprite):
         self.center_x += self.change_x
         self.center_y += self.change_y
 
-        if self.left < 0:
-            self.left = 0
-        elif self.right > SCREEN_WIDTH - 1:
-            self.right = SCREEN_WIDTH - 1
-
         if self.bottom < 0:
             self.bottom = 0
         elif self.top > SCREEN_HEIGHT - 1:
             self.top = SCREEN_HEIGHT - 1
 
+class Shot(arcade.Sprite):
+    def update(self):
+        self.center_x += self.change_x
+        self.center_y += self.change_y
 
 class MyGame(arcade.Window):
     """ Main application class. """
@@ -58,17 +63,8 @@ class MyGame(arcade.Window):
         self.shot_list = arcade.SpriteList()
 
         self.player_sprite = Player("img/player.png", SPRITE_SCALING_PLAYER)
-        self.enemy_sprite = Enemy("img/enemy.png", SPRITE_SCALING_ENEMY)
-        self.shot_sprite = Enemy("img/shot.png", SPRITE_SCALING_SHOT)  # TODO enemy -> shot
-
-        self.enemy_list.append(self.enemy_sprite)
-        self.shot_list.append(self.shot_sprite)
-
         self.player_sprite.center_x = 150
         self.player_sprite.center_y = 50
-
-        self.enemy_sprite.center_x = 500
-        self.enemy_sprite.center_y = 300
 
 
     def setup(self):
@@ -84,7 +80,6 @@ class MyGame(arcade.Window):
             enemy.draw()
         for shot in self.shot_list:
             shot.draw()
-        # Your drawing code goes here
 
     def update(self, delta_time):
         """ All the logic to move, and the game logic goes here. """
@@ -92,12 +87,26 @@ class MyGame(arcade.Window):
         for enemy in self.enemy_list:
             enemy.change_x = - ENEMY_MOVEMENT_SPEED * delta_time
             enemy.change_y = 0
+
             enemy.update()
 
         for shot in self.shot_list:
             shot.change_x = SHOT_MOVEMENT_SPEED * delta_time
             shot.change_y = 0
             shot.update()
+
+        if random.random() < ENEMY_GENERATION_PROBABILITY:
+            enemy_sprite = Enemy("img/enemy.png", SPRITE_SCALING_ENEMY)
+            self.enemy_list.append(enemy_sprite)
+            enemy_sprite.center_x = SCREEN_WIDTH
+            enemy_sprite.center_y = random.randint(ENEMY_SCREEN_SPACING, SCREEN_HEIGHT-ENEMY_SCREEN_SPACING)
+
+        for enemy in self.enemy_list:
+            for shot in self.shot_list:
+                if (arcade.check_for_collision(enemy, shot)):
+                    self.enemy_list.remove(enemy)
+                    self.shot_list.remove(shot)
+
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
@@ -111,20 +120,19 @@ class MyGame(arcade.Window):
         elif key == arcade.key.RIGHT:
             self.player_sprite.change_x = MOVEMENT_SPEED
         elif key == arcade.key.SPACE:
-            shot_sprite = Enemy("img/shot.png", SPRITE_SCALING_SHOT)
-            shot_sprite.center_x = self.player_sprite.center_x
+            shot_sprite = Shot("img/shot.png", SPRITE_SCALING_SHOT)
+            shot_sprite.center_x = self.player_sprite.center_x + self.player_sprite.width/2
             shot_sprite.center_y = self.player_sprite.center_y
             self.shot_list.append(shot_sprite)
 
+
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
-
         if key == arcade.key.UP or key == arcade.key.DOWN:
             self.player_sprite.change_y = 0
         elif key == arcade.key.LEFT or key == arcade.key.RIGHT:
             self.player_sprite.change_x = 0
 
-# hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.coin_list)
 def main():
     game = MyGame(SCREEN_WIDTH, SCREEN_HEIGHT)
     game.setup()
